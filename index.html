@@ -6,9 +6,8 @@
   <title>For My Bestie</title>
   <style>
     /* Super tall page for epic scrolling */
-    body { margin: 0; min-height: 400vh; background-color: #000; color: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-x: hidden; touch-action: pan-y; }
+    body { margin: 0; min-height: 450vh; background-color: #000; color: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-x: hidden; touch-action: pan-y; }
     
-    /* Z-Index Layers */
     #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
     #noise-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;
@@ -17,15 +16,12 @@
     #floating-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
     #content { position: absolute; top: 0; left: 0; width: 100%; z-index: 10; pointer-events: none; }
 
-    /* --- Floating Cute Elements --- */
     .particle { position: absolute; font-size: 2rem; opacity: 0.3; animation: floatUp 20s linear infinite; }
     @keyframes floatUp { 0% { transform: translateY(100vh) rotate(0deg) scale(0.8); opacity: 0; } 10% { opacity: 0.5; } 90% { opacity: 0.5; } 100% { transform: translateY(-20vh) rotate(360deg) scale(1.2); opacity: 0; } }
 
-    /* --- Sections --- */
     section { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
     .spacer { height: 50vh; pointer-events: none; } 
 
-    /* Intro */
     .intro-header { font-size: 1.2rem; letter-spacing: 6px; margin-bottom: 50px; text-transform: uppercase; color: rgba(255,255,255,0.6); }
     .flowing-menu { display: flex; flex-direction: column; width: 90%; max-width: 800px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .menu-item { position: relative; padding: 40px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; overflow: hidden; text-align: center; }
@@ -37,7 +33,7 @@
     .menu-item:hover .marquee-container, .menu-item:active .marquee-container { opacity: 1; }
     .menu-item:hover .menu-text, .menu-item:active .menu-text { color: transparent; -webkit-text-stroke: 1px rgba(255, 255, 255, 0.8); }
 
-    /* --- TWO-WAY SPRING CARDS --- */
+    /* --- CARDS --- */
     .cards-container { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1100px; perspective: 1500px; padding: 0 20px; box-sizing: border-box; }
     
     .flip-card { 
@@ -178,10 +174,8 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // --- MOBILE SCREEN DETECTOR ---
     const isMobile = window.innerWidth < 768;
 
-    // --- OBSERVERS ---
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             const cards = entry.target.querySelectorAll('.flip-card');
@@ -202,7 +196,6 @@
     }, { threshold: 0.2 });
     textObserver.observe(document.getElementById('final-text'));
 
-    // --- CARD LOGIC ---
     const cards = document.querySelectorAll('.flip-card');
     cards.forEach(card => {
         const inner = card.querySelector('.flip-card-inner');
@@ -245,7 +238,6 @@
         });
     });
 
-    // --- 3D SCENE SETUP ---
     const canvasContainer = document.getElementById('canvas-container');
     const controlsBtn = document.getElementById('controls');
 
@@ -257,12 +249,12 @@
 
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true }); 
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // OPTIMIZATION 1: Lock the pixel ratio to 1 for phones to prevent 4K rendering lag
     renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5));
     canvasContainer.appendChild(renderer.domElement);
 
-    // --- ZERO-LAG LIGHTWEIGHT SHADER ---
-    const trailSize = 15; 
+    // --- ZERO-LAG PURE GEL SHADER ---
+    // Brought back to 45 points for a continuous, unbroken line
+    const trailSize = 45; 
     const trailPositions = [];
     for (let i = 0; i < trailSize; i++) { trailPositions.push(new THREE.Vector4(2.0, 2.0, 999.0, 0.0)); }
     const planeGeometry = new THREE.PlaneGeometry(2, 2); 
@@ -274,7 +266,7 @@
       fragmentShader: `
         uniform float u_time; 
         uniform vec2 u_resolution; 
-        uniform vec4 u_trail[15]; 
+        uniform vec4 u_trail[45]; // Increased memory for smooth line
         uniform float u_scrollVelocity; 
         varying vec2 v_uv;
 
@@ -283,22 +275,26 @@
             uv.x *= u_resolution.x / u_resolution.y;
             vec3 totalColor = vec3(0.0);
 
-            for(int i = 0; i < 15; i++) {
-                float age = u_trail[i].z; if(age > 1.5) continue; 
-                vec2 pos = u_trail[i].xy; pos.x *= u_resolution.x / u_resolution.y; float velocity = u_trail[i].w; 
+            for(int i = 0; i < 45; i++) {
+                float age = u_trail[i].z; if(age > 1.0) continue; // Shorter age fades out cleaner
+                
+                vec2 pos = u_trail[i].xy; 
+                pos.x *= u_resolution.x / u_resolution.y; 
+                float velocity = u_trail[i].w; 
                 float dist = length(uv - pos);
                 
-                // OPTIMIZATION 2: Removed FBM Noise. Replaced with ultra-fast Trigonometry physics.
-                float warp = sin(uv.x * 20.0 - u_time * 5.0) * cos(uv.y * 20.0 - u_time * 5.0) * 0.05 * velocity;
+                // Pure geometric gel glow. Zero fractal lag. Thick and solid.
+                float radius = 0.025 + (velocity * 2.5) + (age * 0.02); 
+                float fade = pow(max(0.0, 1.0 - age), 1.8); 
                 
-                float radius = 0.02 + (velocity * 2.5) + (age * 0.04); 
-                float fade = pow(max(0.0, 1.0 - (age / 1.5)), 1.5); 
-                float glow = smoothstep(radius + warp, 0.0, dist);
+                // Sharp inner core, glowing outer edge
+                float glow = smoothstep(radius, radius - 0.02, dist);
 
-                vec3 c1 = vec3(1.0, 0.0, 0.5); vec3 c2 = vec3(1.0, 0.5, 0.0); vec3 c3 = vec3(0.0, 0.9, 1.0); vec3 c4 = vec3(0.3, 0.0, 1.0); 
-                vec3 dropColor = mix(c1, c2, smoothstep(0.0, 0.4, age)); dropColor = mix(dropColor, c3, smoothstep(0.4, 0.9, age)); dropColor = mix(dropColor, c4, smoothstep(0.9, 1.5, age));
+                vec3 c1 = vec3(1.0, 0.0, 0.5); // Neon Pink
+                vec3 c2 = vec3(0.0, 0.9, 1.0); // Bright Cyan
+                vec3 dropColor = mix(c1, c2, age);
 
-                totalColor += dropColor * glow * fade * 0.9;
+                totalColor += dropColor * glow * fade;
             }
             gl_FragColor = vec4(1.0 - exp(-totalColor), 1.0);
         }
@@ -307,7 +303,6 @@
     });
     scene.add(new THREE.Mesh(planeGeometry, waveShaderMaterial));
 
-    // --- PHOTO CUBE ---
     const loader = new THREE.TextureLoader();
     const herPhotos = ['images/photo1.jpg', 'images/photo2.jpg', 'images/photo3.jpg', 'images/photo4.jpg', 'images/photo1.jpg', 'images/photo2.jpg'];
     const materials = herPhotos.map(p => new THREE.MeshBasicMaterial({ map: loader.load(p), side: THREE.DoubleSide }));
@@ -336,7 +331,6 @@
     document.addEventListener('touchmove', (e) => { if(e.touches.length > 0) { targetX = e.touches[0].clientX / window.innerWidth; targetY = (window.innerHeight - e.touches[0].clientY) / window.innerHeight; } }, { passive: true });
     document.addEventListener('touchstart', (e) => { if(e.touches.length > 0) { targetX = e.touches[0].clientX / window.innerWidth; targetY = (window.innerHeight - e.touches[0].clientY) / window.innerHeight; } }, { passive: true });
 
-    // --- SCROLL VELOCITY PHYSICS ---
     let scrollProgress = 0;
     let scrollVelocity = 0;
     let lastScrollY = window.scrollY;
@@ -353,7 +347,6 @@
       else controlsBtn.classList.remove('visible');
     });
 
-    // --- Animation Loop ---
     const clock = new THREE.Clock();
     let lastTime = 0;
     let currentCubeY = -15;
@@ -366,10 +359,14 @@
       waveUniforms.u_scrollVelocity.value = scrollVelocity;
 
       let rawSpeed = Math.sqrt(Math.pow(targetX - lastX, 2) + Math.pow(targetY - lastY, 2));
-      lastX = targetX; lastY = targetY; currentSpeed += (rawSpeed - currentSpeed) * 0.15;
+      
+      // Much tighter tracking so the fluid doesn't lag behind the finger
+      lastX += (targetX - lastX) * 0.6; 
+      lastY += (targetY - lastY) * 0.6; 
+      currentSpeed += (rawSpeed - currentSpeed) * 0.15;
       
       for (let i = trailSize - 1; i > 0; i--) { trailPositions[i].set(trailPositions[i-1].x, trailPositions[i-1].y, trailPositions[i-1].z + delta, trailPositions[i-1].w); }
-      trailPositions[0].set(targetX, targetY, 0.0, currentSpeed);
+      trailPositions[0].set(lastX, lastY, 0.0, currentSpeed);
 
       let targetCubeY = -15; 
       if (scrollProgress > 0.6) {
